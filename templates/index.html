@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fruits and Vegetables Recognition</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+        }
+        .container {
+            width: 60%;
+            margin: 20px auto;
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        input[type="file"] {
+            margin: 20px 0;
+        }
+        .result {
+            margin-top: 20px;
+            font-size: 18px;
+        }
+        .result img {
+            max-width: 250px;
+            max-height: 250px;
+            margin-top: 10px;
+        }
+        .category, .prediction, .calories {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Fruits🍍 and Vegetables🍅 Recognition System</h1>
+
+        <form action="/predict" method="POST" enctype="multipart/form-data">
+            <input type="file" name="image" accept="image/*" required>
+            <br>
+            <button type="submit">Upload Image</button>
+        </form>
+
+        {% if prediction %}
+        <div class="result">
+            <h3>Prediction:</h3>
+            <img src="{{ image_url }}" alt="Uploaded Image">
+            <p class="category">Category: {{ category }}</p>
+            <p class="prediction">Predicted: {{ prediction }}</p>
+            <p class="calories">Calories: {{ calories }} (100 grams)</p>
+        </div>
+        {% endif %}
+    </div>
+
+</body>
+</html>

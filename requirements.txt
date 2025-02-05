@@ -5,3 +5,5 @@ numpy
 Pillow
 flask
 keras
+keras_preprocessing
+tensorflow

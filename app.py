@@ -1,20 +1,16 @@
-import streamlit as st
+from flask import Flask, render_template, request, jsonify
+import os
 from PIL import Image
-from keras_preprocessing.image import load_img, img_to_array
 import numpy as np
+from keras.preprocessing.image import load_img, img_to_array
 from keras.models import load_model
 import requests
 from bs4 import BeautifulSoup
-from tensorflow.keras.layers import DepthwiseConv2D
 
-# Custom object scope to ignore 'groups' argument
-class CustomDepthwiseConv2D(DepthwiseConv2D):
-    def __init__(self, **kwargs):
-        if 'groups' in kwargs:
-            del kwargs['groups']
-        super().__init__(**kwargs)
+app = Flask(__name__)
 
-model = load_model('\Model\Fruit_Vegetable_Recognition_System_Model.h5',custom_objects={'DepthwiseConv2D': CustomDepthwiseConv2D}, compile=False)
+model = load_model('Model/detect.h5', custom_objects={'DepthwiseConv2D': CustomDepthwiseConv2D}, compile=False)
+
 labels = {0: 'apple', 1: 'banana', 2: 'beetroot', 3: 'bell pepper', 4: 'cabbage', 5: 'capsicum', 6: 'carrot',
           7: 'cauliflower', 8: 'chilli pepper', 9: 'corn', 10: 'cucumber', 11: 'eggplant', 12: 'garlic', 13: 'ginger',
           14: 'grapes', 15: 'jalepeno', 16: 'kiwi', 17: 'lemon', 18: 'lettuce',
@@ -24,6 +20,7 @@ labels = {0: 'apple', 1: 'banana', 2: 'beetroot', 3: 'bell pepper', 4: 'cabbage'
 
 fruits = ['Apple', 'Banana', 'Bello Pepper', 'Chilli Pepper', 'Grapes', 'Jalepeno', 'Kiwi', 'Lemon', 'Mango', 'Orange',
           'Paprika', 'Pear', 'Pineapple', 'Pomegranate', 'Watermelon']
+
 vegetables = ['Beetroot', 'Cabbage', 'Capsicum', 'Carrot', 'Cauliflower', 'Corn', 'Cucumber', 'Eggplant', 'Ginger',
               'Lettuce', 'Onion', 'Peas', 'Potato', 'Raddish', 'Soy Beans', 'Spinach', 'Sweetcorn', 'Sweetpotato',
               'Tomato', 'Turnip']
@@ -31,14 +28,14 @@ vegetables = ['Beetroot', 'Cabbage', 'Capsicum', 'Carrot', 'Cauliflower', 'Corn'
 
 def fetch_calories(prediction):
     try:
-        url = 'https://www.google.com/search?&q=calories in ' + prediction
+        url = f'https://www.google.com/search?&q=calories in {prediction}'
         req = requests.get(url).text
         scrap = BeautifulSoup(req, 'html.parser')
         calories = scrap.find("div", class_="BNeawe iBp4i AP7Wnd").text
         return calories
     except Exception as e:
-        st.error("Can't able to fetch the Calories")
         print(e)
+        return "Calories not found."
 
 
 def processed_img(img_path):
@@ -48,36 +45,40 @@ def processed_img(img_path):
     img = np.expand_dims(img, [0])
     answer = model.predict(img)
     y_class = answer.argmax(axis=-1)
-    print(y_class)
-    y = " ".join(str(x) for x in y_class)
-    y = int(y)
+    y = int(" ".join(str(x) for x in y_class))
     res = labels[y]
-    print(res)
     return res.capitalize()
 
 
-def run():
-    st.title("Fruits🍍-Vegetable🍅 Recognition System")
-    img_file = st.file_uploader("Choose an Image", type=["jpg", "png"])
-    if img_file is not None:
-        img = Image.open(img_file).resize((250, 250))
-        st.image(img, use_container_width =False)
-        save_image_path = 'D:\Projects\Fruit_Vegetable_Recognition_System\Model' + img_file.name
-        with open(save_image_path, "wb") as f:
-            f.write(img_file.getbuffer())
+@app.route('/')
+def home():
+    return render_template('index.html')
 
-        # if st.button("Predict"):
-        if img_file is not None:
-            result = processed_img(save_image_path)
-            print(result)
-            if result in vegetables:
-                st.info('**Category : Vegetables**')
-            else:
-                st.info('**Category : Fruit**')
-            st.success("**Predicted : " + result + '**')
-            cal = fetch_calories(result)
-            if cal:
-                st.warning('**' + cal + '(100 grams)**')
+
+@app.route('/predict', methods=['POST'])
+def predict():
+    if 'image' not in request.files:
+        return render_template('index.html', prediction=None)
+
+    file = request.files['image']
+    if file and file.filename.lower().endswith(('.png', '.jpg', '.jpeg')):
+        file_path = os.path.join('uploads', file.filename)
+        file.save(file_path)
+
+        # Image Prediction
+        prediction = processed_img(file_path)
+        if prediction in vegetables:
+            category = 'Vegetables'
+        else:
+            category = 'Fruit'
+
+        # Fetch Calories
+        calories = fetch_calories(prediction)
+
+        return render_template('index.html', prediction=prediction, category=category, calories=calories, image_url=file_path)
+
+    return render_template('index.html', prediction=None)
+
 
 if __name__ == '__main__':
-    run()
+    app.run(debug=True)
