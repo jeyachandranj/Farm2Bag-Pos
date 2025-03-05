@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Farm2Bag - Fruits & Vegetables Detector</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🥕</text></svg>">
+    <style>
+        :root {
+            --primary-color: #FF6F00;  /* Vibrant Orange */
+            --secondary-color: #FFA726; /* Lighter Orange */
+            --text-color: #333;
+            --background-color: #FFF3E0;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            background-color: var(--primary-color);
+            color: white;
+            padding: 10px;
+            border-radius: 10px;
+        }
+
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin-right: 20px;
+            background-color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+        }
+
+        .header-text {
+            text-align: left;
+        }
+
+        .header-text h1 {
+            margin: 0;
+            font-size: 2.5em;
+        }
+
+        .header-text a {
+            color: white;
+            text-decoration: none;
+            font-size: 0.8em;
+        }
+
+        .input-section {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        #video-container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        #detected-items {
+            background-color: #FFF3E0;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 10px;
+            border: 2px solid var(--primary-color);
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: var(--secondary-color);
+        }
+
+        input[type="file"] {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #FFF3E0;
+            border: 1px solid var(--primary-color);
+            border-radius: 5px;
+        }
+
+        .error {
+            color: #D32F2F;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+
+        @media (max-width: 600px) {
+            .input-section {
+                flex-direction: column;
+            }
+
+            .header {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .logo {
+                margin-right: 0;
+                margin-bottom: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTpEfRXQRs0F5BQntg9ftecBflZ_8L47X5UPQ&s" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" /></div>       <div class="header-text">
+            <h1>Farm2Bag</h1>
+            <a href="https://www.farm2bag.com" target="_blank">www.farm2bag.com</a>
+        </div>
+    </div>
+
+    <h2>Fruits & Vegetables Detector</h2>
+    
+    <div class="input-section">
+        <!-- File Upload -->
+        <div>
+            <h3>Upload Image</h3>
+            <form id="upload-form" enctype="multipart/form-data">
+                <input type="file" id="file-upload" name="file" accept="image/*">
+                <button type="button" onclick="uploadImage()">Detect</button>
+            </form>
+            <div id="file-error" class="error"></div>
+        </div>
+        
+        <!-- Webcam Capture -->
+        <div>
+            <h3>Webcam Capture</h3>
+            <video id="video" width="320" height="240" autoplay></video>
+            <button onclick="captureWebcam()">Capture</button>
+        </div>
+    </div>
+    
+    <div id="detected-items"></div>
+
+    <script>
+        // (Previous JavaScript remains the same)
+        function uploadImage() {
+            const fileInput = document.getElementById('file-upload');
+            const fileError = document.getElementById('file-error');
+            const detectedItems = document.getElementById('detected-items');
+            
+            // Clear previous errors and results
+            fileError.textContent = '';
+            detectedItems.innerHTML = '';
+
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                fileError.textContent = 'Please select a file';
+                return;
+            }
+            
+            // Create FormData
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            // Send request
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Upload failed');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.fruits_vegetables) {
+                    detectedItems.innerHTML = 
+                        `<h3>Detected Fruits & Vegetables:</h3><p>${data.fruits_vegetables}</p>`;
+                } else if (data.error) {
+                    fileError.textContent = data.error;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                fileError.textContent = 'Error detecting fruits and vegetables';
+            });
+        }
+
+        // Webcam Capture Setup
+        const video = document.getElementById('video');
+        
+        // Access webcam
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+            })
+            .catch(err => {
+                console.error("Error accessing webcam: ", err);
+                document.getElementById('detected-items').innerHTML = 
+                    `<p>Error accessing webcam: ${err.message}</p>`;
+            });
+
+        // Webcam Capture Function
+        function captureWebcam() {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            
+            const imageData = canvas.toDataURL('image/jpeg');
+            
+            fetch('/webcam', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ image: imageData })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Webcam capture failed');
+                }
+                return response.json();
+            })
+            .then(data => {
+                document.getElementById('detected-items').innerHTML = 
+                    `<h3>Detected Fruits & Vegetables:</h3><p>${data.fruits_vegetables}</p>`;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('detected-items').innerHTML = 
+                    `<p>Error detecting fruits and vegetables</p>`;
+            });
+        }
+    </script>
+</body>
+</html>
