@@ -150,4 +150,4 @@ def webcam_image():
         return jsonify({"error": "Failed to process webcam image"}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)  # Running on port 5000
